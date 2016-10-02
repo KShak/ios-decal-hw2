@@ -22,8 +22,12 @@ class ViewController: UIViewController {
     // TODO: This looks like a good place to add some data structures.
     //       One data structure is initialized below for reference.
     var someDataStructure: [String] = [""]
+    var operatorSelected : Bool = false
+    var savedCalculations : String = ""
+    var savedOperator : String = ""
+    var reset : Bool = false
+    var typeLastPressed : String = ""
     
-
     override func viewDidLoad() {
         super.viewDidLoad()
         view = UIView(frame: UIScreen.main.bounds)
@@ -51,8 +55,93 @@ class ViewController: UIViewController {
     
     // TODO: Ensure that resultLabel gets updated.
     //       Modify this one or create your own.
-    func updateResultLabel(_ content: String) {
-        print("Update me like one of those PCs")
+    func updateResultLabel(_ content: String, type: String) {
+        print("\(operatorSelected)")
+        print("\(savedCalculations)")
+        print("\(savedOperator)")
+        var resultLabelString = resultLabel.text!
+        if type == "number" {
+            if reset {
+                resultLabel.text = "0"
+                reset = false
+            }
+            if resultLabelString.characters.count == 7 {
+                return
+            } else if resultLabel.text == "0" {
+                resultLabel.text = content
+            } else {
+                resultLabel.text = resultLabelString + content
+            }
+            typeLastPressed = "number"
+        } else if type == "period" {
+            if reset {
+                resultLabelString = ""
+                reset = false
+            }
+            if resultLabelString.contains(".") {
+                // period already in resultLabel
+                return
+            }
+            resultLabel.text = resultLabelString + content
+            typeLastPressed = "period"
+        } else {
+            // type == "operator"
+            switch content {
+            case "=":
+                var resultDoubleString = calculate(a: savedCalculations, b: resultLabelString, operation: savedOperator)
+                let resultDoubleStringArr = resultDoubleString.characters.split{$0 == "."}.map(String.init)
+                if Int(resultDoubleStringArr[1]) == 0 {
+                    resultLabel.text = resultDoubleStringArr[0]
+                } else {
+                    resultLabel.text = resultDoubleString
+                }
+                savedCalculations = ""
+                savedOperator = ""
+                operatorSelected = false
+                reset = true
+            case "%":
+                resultLabel.text = String(Double(resultLabelString)! / Double("100")!)
+            case "C":
+                resultLabel.text = "0"
+                savedCalculations = ""
+                savedOperator = ""
+                operatorSelected = false
+            case "+/-":
+                if resultLabelString.contains("-") {
+                    // already negative flip to positive
+                    let temp = resultLabelString
+                    let index = temp.index(temp.startIndex, offsetBy: 1)
+                    resultLabel.text = temp.substring(from: index)
+                } else {
+                    if resultLabelString.characters.count == 7 {
+                        return
+                    } else {
+                        resultLabel.text = "-" + resultLabelString
+                    }
+                }
+            default:
+                if typeLastPressed == "operator" {
+                    savedOperator = content
+                    return
+                }
+                reset = true
+                if operatorSelected {
+                    savedCalculations = calculate(a: savedCalculations, b: resultLabelString, operation: savedOperator)
+                    let resultDoubleStringArr = savedCalculations.characters.split{$0 == "."}.map(String.init)
+                    if Int(resultDoubleStringArr[1]) == 0 {
+                        resultLabel.text = resultDoubleStringArr[0]
+                    } else {
+                        resultLabel.text = savedCalculations
+                    }
+                    savedOperator = content
+                } else {
+                    operatorSelected = true
+                    savedOperator = content
+                    savedCalculations = resultLabelString
+                }
+                typeLastPressed = "operator"
+            }
+        }
     }
     
     
@@ -71,26 +160,45 @@ class ViewController: UIViewController {
     
     // TODO: A general calculate method for doubles
     //       Modify this one or create your own.
-    func calculate(a: String, b:String, operation: String) -> Double {
+    func calculate(a: String, b:String, operation: String) -> String {
         print("Calculation requested for \(a) \(operation) \(b)")
-        return 0.0
+        switch operation {
+        case "/":
+            return String(Double(a)! / Double(b)!)
+        case "*":
+            return String(Double(a)! * Double(b)!)
+        case "-":
+            return String(Double(a)! - Double(b)!)
+        case "+":
+            return String(Double(a)! + Double(b)!)
+        default:
+            return "0.0"
+        }
     }
     
     // REQUIRED: The responder to a number button being pressed.
     func numberPressed(_ sender: CustomButton) {
         guard Int(sender.content) != nil else { return }
         print("The number \(sender.content) was pressed")
-        // Fill me in!
+        updateResultLabel(sender.content, type: "number")
     }
     
     // REQUIRED: The responder to an operator button being pressed.
     func operatorPressed(_ sender: CustomButton) {
-        // Fill me in!
+        print("The operator \(sender.content) was pressed")
+        updateResultLabel(sender.content, type: "operator")
     }
     
     // REQUIRED: The responder to a number or operator button being pressed.
     func buttonPressed(_ sender: CustomButton) {
-       // Fill me in!
+        switch sender.content {
+        case "0":
+            updateResultLabel(sender.content, type: "number")
+        case ".":
+            updateResultLabel(sender.content, type: "period")
+        default:
+            break
+        }
     }
     
     // IMPORTANT: Do NOT change any of the code below.
